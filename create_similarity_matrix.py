@@ -31,11 +31,25 @@ def keep_passage_votes(vote_filenames):
 def congressman_ids_from_dict(vote_dict):
 	ids = []
 	for element in vote_dict:
-		ids.append(element["id"])
+		ids.append((element["id"], element["party"]))
 	return ids
 
 vote_filenames =  get_vote_filenames()
 passage_filenames = keep_passage_votes(vote_filenames)
+
+def get_party_affiliations(bioguide_ids, parties):
+	affiliation = {}
+	for congressman, party in zip(bioguide_ids, parties):
+		affiliation[congressman] = party
+	return affiliation
+
+def convert_affiliation_to_color(affil):
+	if affil == "R" or affil == "r" or affil == "Republican" or affil == "republican":
+		return 'red'
+	elif affil == "D" or affil == "d" or affil == "Democrat" or affil == "democrat":
+		return 'blue'
+	else:
+		return 'green'
 
 voting_record = defaultdict(lambda: defaultdict(int))
 votes = []
@@ -46,23 +60,23 @@ for passage_filename in passage_filenames:
 		for vote_type in data["votes"].keys():
 			if vote_type == "Aye":
 				user_ids = congressman_ids_from_dict(data["votes"]["Aye"]) 
-				votes_to_add = [(uid, vote_id, 1.0) for uid in user_ids]
+				votes_to_add = [(uid, vote_id, 1.0, party) for uid, party in user_ids]
 				votes += votes_to_add
 			elif vote_type == "Yea":
 				user_ids = congressman_ids_from_dict(data["votes"]["Yea"]) 
-				votes_to_add = [(uid, vote_id, 1.0) for uid in user_ids]
+				votes_to_add = [(uid, vote_id, 1.0, party) for uid, party in user_ids]
 				votes += votes_to_add
 			elif vote_type == "Nay":
 				user_ids = congressman_ids_from_dict(data["votes"]["Nay"]) 
-				votes_to_add = [(uid, vote_id, -1.0) for uid in user_ids]
+				votes_to_add = [(uid, vote_id, -1.0, party) for uid, party in user_ids]
 				votes += votes_to_add
 			elif vote_type == "No":
 				user_ids = congressman_ids_from_dict(data["votes"]["No"]) 
-				votes_to_add = [(uid, vote_id, -1.0) for uid in user_ids]
+				votes_to_add = [(uid, vote_id, -1.0, party) for uid, party in user_ids]
 				votes += votes_to_add
 			elif vote_type == "Not Voting": 
 				user_ids = congressman_ids_from_dict(data["votes"]["Not Voting"]) 
-				votes_to_add = [(uid, vote_id, 0.0) for uid in user_ids]
+				votes_to_add = [(uid, vote_id, 0.0, party) for uid, party in user_ids]
 				votes += votes_to_add
 			elif vote_type == "Present":
 				continue
@@ -78,11 +92,21 @@ pca = PCA(2)
 two_d_view = pca.fit_transform(vote_df)
 print "Explained variance ratios:"
 print pca.explained_variance_ratio_
+
+print "Getting party affiliations"
+party_affiliations = get_party_affiliations([x[0] for x in votes], [x[3] for x in votes])
+party_affil_colored = pd.Series(party_affiliations).apply(convert_affiliation_to_color)
+colors = party_affil_colored[vote_df.index]
+print "Colors"
+print colors
+#print party_affil_colored.head()
 print "Plotting"
+
 print two_d_view
 plt.figure()
-plt.scatter(two_d_view[:, 0], two_d_view[:, 1])
+plt.scatter(two_d_view[:, 0], two_d_view[:, 1], c=colors)
 plt.show()
+
 
 
 
