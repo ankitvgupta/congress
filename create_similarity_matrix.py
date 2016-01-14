@@ -86,7 +86,7 @@ print "Counting the number of votes"
 print "Number of votes is:"
 print "", len(votes)
 print "Creating vote dataframe"
-vote_df = pd.DataFrame(votes).pivot(index=0, columns=1, values=2).fillna(0)
+vote_df = pd.pivot_table(pd.DataFrame(votes), index=0, columns=1, values=2).fillna(0.0)
 print "Doing PCA"
 pca = PCA(2)
 two_d_view = pca.fit_transform(vote_df)
